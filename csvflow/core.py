@@ -80,10 +80,14 @@ class CSVProcessor:
         
         Args:
             data: List of dictionaries representing CSV rows
-            conditions: Dictionary mapping column names to target values
+            conditions: Dictionary mapping column names to target values for filtering
             
         Returns:
-            Filtered list of rows matching all conditions
+            Filtered list of dictionaries matching all conditions
+            
+        Note:
+            String comparisons are case-insensitive. For case-sensitive matching,
+            use the more advanced filter_rows_advanced method.
         """
         if not data:
             return []
@@ -91,146 +95,26 @@ class CSVProcessor:
         filtered = []
         for row in data:
             match = True
-            for field, value in conditions.items():
-                if field not in row:
+            for column, target_value in conditions.items():
+                if column not in row:
                     match = False
                     break
-                # Convert value to string for comparison since CSV values are strings
-                if str(row[field]).strip() != str(value).strip():
-                    match = False
-                    break
+                
+                cell_value = row[column]
+                
+                # Handle string comparisons case-insensitively
+                if isinstance(target_value, str) and isinstance(cell_value, str):
+                    if cell_value.lower() != target_value.lower():
+                        match = False
+                        break
+                else:
+                    # For non-string types, use exact equality
+                    if cell_value != target_value:
+                        match = False
+                        break
+            
             if match:
                 filtered.append(row)
         
         return filtered
-    
-    def filter_rows_by_predicate(
-        self,
-        data: List[Dict[str, str]],
-        predicate: callable
-    ) -> List[Dict[str, str]]:
-        """
-        Filter rows using a custom predicate function.
-        
-        Args:
-            data: List of dictionaries representing CSV rows
-            predicate: Function that takes a row dict and returns True/False
-            
-        Returns:
-            Filtered list of rows where predicate returns True
-        """
-        return [row for row in data if predicate(row)]
-    
-    def get_column_values(self, data: List[Dict[str, str]], column: str) -> List[str]:
-        """
-        Extract all values from a specific column.
-        
-        Args:
-            data: List of dictionaries representing CSV rows
-            column: Column name to extract
-            
-        Returns:
-            List of string values from the specified column
-            
-        Raises:
-            KeyError: If column doesn't exist in any row
-        """
-        if not data:
-            return []
-        
-        if column not in data[0]:
-            raise KeyError(f"Column '{column}' not found in CSV data")
-        
-        return [row[column] for row in data]
-    
-    def get_unique_values(self, data: List[Dict[str, str]], column: str) -> List[str]:
-        """
-        Get unique values from a specific column.
-        
-        Args:
-            data: List of dictionaries representing CSV rows
-            column: Column name to extract unique values from
-            
-        Returns:
-            List of unique string values from the specified column
-        """
-        values = self.get_column_values(data, column)
-        return list(set(values))
-    
-    def count_by_column(self, data: List[Dict[str, str]], column: str) -> Dict[str, int]:
-        """
-        Count occurrences of each value in a column.
-        
-        Args:
-            data: List of dictionaries representing CSV rows
-            column: Column name to count values from
-            
-        Returns:
-            Dictionary mapping values to their counts
-        """
-        counts = {}
-        for row in data:
-            if column in row:
-                value = row[column].strip()
-                counts[value] = counts.get(value, 0) + 1
-        return counts
-
-
-# Convenience functions for common operations
-def read_csv(
-    source: Union[str, Path, io.TextIOBase],
-    delimiter: str = ',',
-    quotechar: str = '"',
-    skip_initial_space: bool = True
-) -> List[Dict[str, str]]:
-    """
-    Read CSV file into list of dictionaries.
-    
-    Args:
-        source: File path or file-like object
-        delimiter: Field delimiter (default: ',')
-        quotechar: Quote character (default: '"')
-        skip_initial_space: Skip whitespace after delimiter (default: True)
-        
-    Returns:
-        List of dictionaries representing CSV rows
-    """
-    processor = CSVProcessor(delimiter, quotechar, skip_initial_space)
-    return processor.read_csv(source)
-
-
-def filter_csv(
-    data: List[Dict[str, str]],
-    **conditions: Union[str, int, float, bool, None]
-) -> List[Dict[str, str]]:
-    """
-    Filter CSV data by exact field-value matches.
-    
-    Args:
-        data: List of dictionaries representing CSV rows
-        **conditions: Keyword arguments mapping column names to values
-        
-    Returns:
-        Filtered list of rows
-    """
-    processor = CSVProcessor()
-    return processor.filter_rows(data, conditions)
-
-
-def filter_csv_by_predicate(
-    data: List[Dict[str, str]],
-    predicate: callable
-) -> List[Dict[str, str]]:
-    """
-    Filter CSV data using a custom predicate function.
-    
-    Args:
-        data: List of dictionaries representing CSV rows
-        predicate: Function that takes a row dict and returns True/False
-        
-    Returns:
-        Filtered list of rows
-    """
-    processor = CSVProcessor()
-    return processor.filter_rows_by_predicate(data, predicate)
 ```
